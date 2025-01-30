@@ -1,89 +1,79 @@
-from __future__ import annotations
-from abc import ABC
+from abc import ABC, abstractmethod
 
-
-class Mediator(ABC):
-    """
-    The Mediator interface declares a method used by components to notify the
-    mediator about various events. The Mediator may react to these events and
-    pass the execution to other components.
-    """
-
-    def notify(self, sender: object, event: str) -> None:
+# Mediator Interface
+class AirTrafficControl(ABC):
+    @abstractmethod
+    def notify(self, aircraft, event):
         pass
 
+# Concrete Mediator
+class TowerControl(AirTrafficControl):
+    def __init__(self):
+        self.aircrafts = []
+        self.runway_in_use = False
 
-class ConcreteMediator(Mediator):
-    def __init__(self, component1: Component1, component2: Component2) -> None:
-        self._component1 = component1
-        self._component1.mediator = self
-        self._component2 = component2
-        self._component2.mediator = self
+    def register_aircraft(self, aircraft):
+        self.aircrafts.append(aircraft)
+        aircraft.set_mediator(self)
 
-    def notify(self, sender: object, event: str) -> None:
-        if event == "A":
-            print("Mediator reacts on A and triggers following operations:")
-            self._component2.do_c()
-        elif event == "D":
-            print("Mediator reacts on D and triggers following operations:")
-            self._component1.do_b()
-            self._component2.do_c()
+    def notify(self, aircraft, event):
+        if event == "request_takeoff":
+            if not self.runway_in_use:
+                print(f"{aircraft.name}: Permission granted for takeoff.")
+                self.runway_in_use = True
+                aircraft.takeoff()
+                self.runway_in_use = False
+            else:
+                print(f"{aircraft.name}: Runway busy. Please wait.")
+        elif event == "request_landing":
+            if not self.runway_in_use:
+                print(f"{aircraft.name}: Permission granted for landing.")
+                self.runway_in_use = True
+                aircraft.land()
+                self.runway_in_use = False
+            else:
+                print(f"{aircraft.name}: Runway busy. Please wait.")
 
+# Colleague
+class Aircraft:
+    def __init__(self, name):
+        self.name = name
+        self.mediator = None
 
-class BaseComponent:
-    """
-    The Base Component provides the basic functionality of storing a mediator's
-    instance inside component objects.
-    """
+    def set_mediator(self, mediator):
+        self.mediator = mediator
 
-    def __init__(self, mediator: Mediator = None) -> None:
-        self._mediator = mediator
+    def request_takeoff(self):
+        print(f"{self.name}: Requesting permission for takeoff.")
+        self.mediator.notify(self, "request_takeoff")
 
-    @property
-    def mediator(self) -> Mediator:
-        return self._mediator
+    def request_landing(self):
+        print(f"{self.name}: Requesting permission for landing.")
+        self.mediator.notify(self, "request_landing")
 
-    @mediator.setter
-    def mediator(self, mediator: Mediator) -> None:
-        self._mediator = mediator
+    def takeoff(self):
+        print(f"{self.name}: Taking off!")
 
+    def land(self):
+        print(f"{self.name}: Landing!")
 
-"""
-Concrete Components implement various functionality. They don't depend on other
-components. They also don't depend on any concrete mediator classes.
-"""
-
-
-class Component1(BaseComponent):
-    def do_a(self) -> None:
-        print("Component 1 does A.")
-        self.mediator.notify(self, "A")
-
-    def do_b(self) -> None:
-        print("Component 1 does B.")
-        self.mediator.notify(self, "B")
-
-
-class Component2(BaseComponent):
-    def do_c(self) -> None:
-        print("Component 2 does C.")
-        self.mediator.notify(self, "C")
-
-    def do_d(self) -> None:
-        print("Component 2 does D.")
-        self.mediator.notify(self, "D")
-
-
+# Example Usage
 if __name__ == "__main__":
-    # The client code.
-    c1 = Component1()
-    c2 = Component2()
-    mediator = ConcreteMediator(c1, c2)
+    # Create the mediator
+    tower = TowerControl()
 
-    print("Client triggers operation A.")
-    c1.do_a()
+    # Create colleagues
+    aircraft1 = Aircraft("Flight A1")
+    aircraft2 = Aircraft("Flight B2")
+    aircraft3 = Aircraft("Flight C3")
 
-    print("\n", end="")
+    # Register colleagues with the mediator
+    tower.register_aircraft(aircraft1)
+    tower.register_aircraft(aircraft2)
+    tower.register_aircraft(aircraft3)
 
-    print("Client triggers operation D.")
-    c2.do_d()
+    # Simulate events
+    aircraft1.request_takeoff()
+    aircraft2.request_landing()
+    aircraft3.request_takeoff()
+    aircraft2.request_takeoff()
